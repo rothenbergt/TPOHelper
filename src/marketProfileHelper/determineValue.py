@@ -4,9 +4,13 @@ import pandas
 import datetime
 import matplotlib.pyplot as plt
 import time
+import numpy
+import operator
+import functools
+from itertools import chain
 
 # Read in data
-es = pandas.read_csv("EPM21.csv")
+es = pandas.read_csv("EPM21 - 30 min - RTH.csv")
 
 # Create 30 minute periods from data
 
@@ -41,6 +45,7 @@ def createVolumeProfile(df):
 
 def createTPO(df):
     
+
     # For each 30 minutes, keep track of where price has been
     
     # Can breakup data and multithread
@@ -69,6 +74,26 @@ def createTPO(df):
     periodlend = datetime.datetime.strptime('20210416 15300', '%Y%m%d %H%M%S')
     periodmend = datetime.datetime.strptime('20210416 16000', '%Y%m%d %H%M%S')
 
+    startIndex = int(df.index[df['T'] == periodastart].tolist()[0])
+
+    indexes = []
+    indexes.append(int(df.index[df['T'] == periodastart].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodaend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodbend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodcend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == perioddend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodeend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodfend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodgend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodhend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodiend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodjend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodkend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodlend].tolist()[0]))
+    indexes.append(int(df.index[df['T'] == periodmend].tolist()[0]))
+
+    print(indexes)
+
     print("Period A Start: " + str(df.index[df['T'] == periodastart].tolist()[0]))
     print("Period A End: " + str(df.index[df['T'] == periodaend].tolist()[0]))
     print("Period B End: " + str(df.index[df['T'] == periodbend].tolist()[0]))
@@ -84,6 +109,51 @@ def createTPO(df):
     print("Period L End: " + str(df.index[df['T'] == periodlend].tolist()[0]))
     print("Period M End: " + str(df.index[df['T'] == periodmend].tolist()[0]))
     
+    singlePrints = set()
+    listOfSets = []
+    listOfNumpy = []
+    
+    for i in range(0, len(indexes) - 1):
+        start = i-1
+        stop = i
+        tempSet = set()
+        
+        
+        # Get the High and Low for each
+        high = float(df.loc[i+1][df.columns[2]])
+        low = float(df.loc[i][df.columns[3]])
+        print("Period " + chr((i % 14) + 97))
+        print("High = " + str(high) + " Low = " + str(low))
+        print(numpy.arange(low, high, 0.25))
+        listOfNumpy.append(numpy.arange(low, high, 0.25))
+        listOfSets.append(set(numpy.arange(low, high, 0.25)))
+
+        
+    # print(listOfNumpy)
+    
+    print("A")
+    print(listOfSets[0])
+    print("B")
+    print(listOfSets[1])
+    
+    print("Single Priunts")
+    
+    tempSet=set()
+    
+    for i in range(0, len(listOfSets)):
+        tempSet = tempSet ^ listOfSets[i]
+    
+    print(sorted(tempSet))
+
+    quit()
+    
+    print(singlePrints)
+    print("SERIUJHSER")
+    print(set.difference(*listOfSets))
+
+    
+    
+    
     my_list = []
     
     print("The maximum value is" )
@@ -95,13 +165,34 @@ def createTPO(df):
 
     print(df[start:end][df.columns[1]].min())
     
-    # # From period a start to period a end + 1 ?, create the series
-    # for i in range(df.index[df['T'] == periodastart].tolist()[0], df.index[df['T'] == periodaend].tolist()[0]):
-    #     # print(df.loc[i][df.columns[1]])
-    #     my_list.append(df.loc[i][df.columns[1]])
-        
-    # print(pandas.Series(my_list))
+    # t1 = set(frozenset(i) for i in t) TODO look this up
     
+    listOfLists = []
+    my_list = []
+    aset = set()
+    bset = set()
+
+    # # From period a start to period a end + 1 ?, create the series
+    for i in range(df.index[df['T'] == periodastart].tolist()[0], df.index[df['T'] == periodaend].tolist()[0] + 1):
+        aset.add(df.loc[i][df.columns[1]])
+        
+    
+        
+    # # From period a start to period a end + 1 ?, create the series
+    for i in range(df.index[df['T'] == periodaend].tolist()[0] + 1, df.index[df['T'] == periodbend].tolist()[0] + 1):
+        bset.add(df.loc[i][df.columns[1]])
+    
+ 
+    
+    print("Single prints for inital balance range is")
+
+
+    print(aset.symmetric_difference(bset))
+    print()
+    print(aset)
+    print()
+    print(bset)
+    # print(pandas.Series(my_list))
     # print(new_df)
 
     # A (9:30-10) : 4173, 4173.25
@@ -109,8 +200,6 @@ def createTPO(df):
     # .
     # .
     # .
-
-
 
 
 # print(es.columns)
