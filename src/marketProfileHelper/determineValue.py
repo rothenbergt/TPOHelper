@@ -136,7 +136,7 @@ def createTPO(df):
     print("B")
     print(listOfSets[1])
     
-    print("Single Priunts")
+    print("Single Prints")
     
     tempSet=set()
     
@@ -151,8 +151,6 @@ def createTPO(df):
     print("SERIUJHSER")
     print(set.difference(*listOfSets))
 
-    
-    
     
     my_list = []
     
