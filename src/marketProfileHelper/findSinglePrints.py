@@ -6,7 +6,10 @@ import collections
 # Read in data
 es = pd.read_csv("EPM21 - 30 min - RTH.csv")
 
-data = yf.download("ES=F", period = "1d", interval = '30m')
+es = yf.download("ES=F", period = "1d", interval = '30m')[19:]
+nq = yf.download("NQ=F", period = "1d", interval = '30m')[19:]
+rty = yf.download("RTY=F", period = "1d", interval = '30m')[19:]
+
 # print(es)
 # print(data[19:])
 
@@ -26,6 +29,8 @@ def findRTHSinglePrints(df, tickSize = 0.25):
         # For each high and low, create a numpy series, with tick size intervals
         periodLocations = np.arange(periodLow, periodHigh + tickSize, tickSize)
         
+        periodLocations = np.round(periodLocations, 2)
+        
         # Add the period locatiosn to the running counter
         c.update(periodLocations)
     
@@ -37,38 +42,45 @@ def findRTHSinglePrints(df, tickSize = 0.25):
         if c[key] == 1:
             singlePrints.append(key)
     
-    print("The single prints found on this day are")
     # print(sorted(singlePrints))
 
-    listOfLists = [[], [], []]
+    listOfLists = []
     currentList = []
     listIdx = 0
     for idx, singlePrint in enumerate(singlePrints):
         
         if idx == 0:
-            print("We have single prints from: " + str(singlePrint), end = ' ')
+            # print("We have single prints from: " + str(singlePrint), end = ' ')
             currentList.append(singlePrint)
             temp = singlePrint
         elif idx == len(singlePrints) - 1:
-            print("to " + str(singlePrint))
+            # print("to " + str(singlePrint))
+            try:
+                listOfLists[listIdx] = currentList
+            except IndexError:
+                listOfLists.append(currentList)
+            
         else:
             if singlePrint > (temp + tickSize):
-                print("to " + str(temp))
+                # print("to " + str(temp))
                 currentList.append(temp)
                 # print(currentList)
-                listOfLists[listIdx] = currentList
+                try:
+                    listOfLists[listIdx] = currentList
+                except IndexError:
+                    listOfLists.append(currentList)
                 listIdx += 1
                 currentList = []
-                print("We have single prints from: " + str(singlePrint), end = ' ')
+                # print("We have single prints from: " + str(singlePrint), end = ' ')
                 currentList.append(singlePrint)
        
+ 
         currentList.append(singlePrint)
         # print(singlePrint)
         temp = singlePrint
-        
-
+     
     if max(c) in singlePrints:
-        print("We have an excess high from " + str(max(c)), end = ' ')
+        print("Excess High:     " + str(max(c)), end = ' ')
         
         for idx, singlePrint in enumerate(reversed(singlePrints)):
             
@@ -76,13 +88,24 @@ def findRTHSinglePrints(df, tickSize = 0.25):
                 temp = singlePrint
             
             if temp > (singlePrint + tickSize):
-                print("To " + str(temp))
+                print("- " + str(temp) + "\t(" + str(max(c) - temp) + ")")
                 break
                 
             temp = singlePrint
+     
+        
+    for currList in listOfLists:
+        try:
+            if (max(c) not in currList and min(c) not in currList):
+                print("Single Prints:   " + str(currList[0]) + " - " + str(currList[len(currList) - 1]) + "\t(" + str(currList[len(currList) - 1] - currList[0]) + str(")"))
+        except:
+            continue
+        
+        
+
 
     if min(c) in singlePrints:
-        print("We have an excess low from " + str(min(c)), end = ' ')
+        print("Excess Low:      " + str(min(c)), end = ' ')
         
         for idx, singlePrint in enumerate(singlePrints):
             
@@ -90,7 +113,7 @@ def findRTHSinglePrints(df, tickSize = 0.25):
                 temp = singlePrint
             
             if singlePrint > (temp + tickSize):
-                print("To " + str(temp))
+                print("- " + str(temp) + "\t(" + str(temp - min(c)) + str(")"))
                 break
                 
             temp = singlePrint
@@ -100,5 +123,14 @@ def findRTHSinglePrints(df, tickSize = 0.25):
     # If our low is in one of the single print distributions, that is an excess low
     
 
-# findRTHSinglePrints(es)
-findRTHSinglePrints(data[19:])
+
+print("--------------------- ES ----------------------")
+print("Parameter            Range               Size")
+print("--------------------- -- ----------------------")
+findRTHSinglePrints(es)
+print("--------------------- NQ ----------------------")
+
+print("Parameter            Range               Size")
+print("--------------------- -- ----------------------")
+findRTHSinglePrints(nq)
+print("--------------------- -- ----------------------")
