@@ -5,6 +5,49 @@ import numpy as np
 import collections
 import datetime
 
+def convert_to_datetime64(date):
+    return np.datetime64(date)
+
+def convert_to_datetime(date):
+    return datetime.datetime(date)
+
+def getDataFrame(ticker):
+    
+    try:
+        df = yf.download(ticker, period = "2d", interval = '30m', parse_dates = ['Date'])
+        
+        # If the dataframe is empty, exit 
+        if df.empty:
+            print("No data returned from ticker " + str(ticker))
+            quit()
+            
+        # Change the index from datetime 
+        df.reset_index(inplace = True)
+        
+        # Convert the datetime64 north america to datetimen64
+        df['Datetime'] = df['Datetime'].apply(convert_to_datetime64)
+
+        start_index = getDataFrameIndex(df, month = 4, day = 27)
+        
+        findRTHSinglePrints(df[start_index:])
+    except ConnectionError:
+        print("Data for ticker " + str(ticker) + " could not be downloaded...")
+        quit()
+
+
+def getDataFrameIndex(df, day, month):
+    
+    # Create the datetime we are referencing
+    d1 = np.datetime64(datetime.datetime(2021, month, day, 9, 30, 00))
+
+    # Find the location of this
+    start_index = df[df['Datetime'] == d1].index[0]
+   
+    return start_index
+
+getDataFrame("ES=F")
+
+quit()
 # Read in data using Yahoo Finance API. Get rid of ETH data
 es = yf.download("ES=F", period = "2d", interval = '30m', parse_dates = ['Date'])
 nq = yf.download("NQ=F", period = "2d", interval = '30m')[19:-3]
@@ -20,6 +63,7 @@ def convert_to_datetime64(date):
 
 def convert_to_datetime(date):
     return datetime.datetime(date)
+
 
 
 # TODO do I want to keep this in datetime64, or should i convert everything to datetime?
