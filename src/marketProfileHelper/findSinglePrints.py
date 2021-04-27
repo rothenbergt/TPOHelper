@@ -5,9 +5,12 @@ import numpy as np
 import collections 
 
 # Read in data using Yahoo Finance API. Get rid of ETH data
-es = yf.download("ES=F", period = "1d", interval = '30m')[19:]
-nq = yf.download("NQ=F", period = "1d", interval = '30m')[19:]
-rty = yf.download("RTY=F", period = "1d", interval = '30m')[19:]
+es = yf.download("ES=F", period = "2d", interval = '30m')[19:-3]
+nq = yf.download("NQ=F", period = "2d", interval = '30m')[19:-3]
+# rty = yf.download("RTY=F", period = "1d", interval = '30m')[19:]
+
+print(es)
+print(nq)
 
 # This method will find the single prints for a day in the past if given 
 # a dataframe which contains the the periods for 9:30AM - 4:00PM
@@ -37,22 +40,32 @@ def findRTHSinglePrints(df, tickSize = 0.25):
         if c[key] == 1:
             singlePrints.append(key)
     
-
+    print(singlePrints)
+    
     listOfLists = []
     currentList = []
     listIdx = 0
+    temp = 0
+    
     for idx, singlePrint in enumerate(singlePrints):
         
+        print("We are looking at single print value " + str(singlePrint) + " with temp value " + str(temp))
+        
         if idx == 0:
+            print("Starting a new list")
             currentList.append(singlePrint)
             temp = singlePrint
+        
         elif idx == len(singlePrints) - 1:
+                        
             try:
                 listOfLists[listIdx] = currentList
             except IndexError:
                 listOfLists.append(currentList)
+        
         else:
             if singlePrint > (temp + tickSize):
+                print("We have reached a  division")
                 currentList.append(temp)
                 try:
                     listOfLists[listIdx] = currentList
@@ -80,7 +93,7 @@ def findRTHSinglePrints(df, tickSize = 0.25):
             temp = singlePrint
      
         
-    for currList in listOfLists:
+    for currList in reversed(listOfLists):
         try:
             if (max(c) not in currList and min(c) not in currList):
                 print("Single Prints:   " + str(currList[len(currList) - 1]) + " - " + str(currList[0]) + "\t(" + str(currList[len(currList) - 1] - currList[0]) + str(")"))
@@ -114,11 +127,11 @@ print("--------------------- ES ----------------------")
 print("Parameter            Range               Size")
 print("-----------------------------------------------")
 findRTHSinglePrints(es)
-print("")
-print("--------------------- NQ ----------------------")
+# print("")
+# print("--------------------- NQ ----------------------")
 
-print("Parameter            Range               Size")
-print("-----------------------------------------------")
-findRTHSinglePrints(nq)
-print("-----------------------------------------------")
-print("\n")
+# print("Parameter            Range               Size")
+# print("-----------------------------------------------")
+# findRTHSinglePrints(nq)
+# print("-----------------------------------------------")
+# print("\n")
