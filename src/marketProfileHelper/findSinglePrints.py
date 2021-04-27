@@ -1,90 +1,31 @@
-# The purpose of this file is to find single prints for a given day
+#  findSinglePrints.py
+#  ==============
+#  Script which will find the single prints for a given day in the past (up to 60 days)
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
 import collections
 import datetime
+import warnings
 
+# We get a warning because the datetime64 is a deprecated format. 
+# I don't feel like recreating for datetime.datetime until a later date.
+# The reason it was deprecated had to do with converting timezones which
+# we aren't worried about for this script. I will ignore warnings for now.
+warnings.filterwarnings("ignore")
+
+# If you want more information to debug the script, you may turn this on
+debug = False
+
+# Method which converts a datetime.datetime to a datetime64
 def convert_to_datetime64(date):
     return np.datetime64(date)
 
-def convert_to_datetime(date):
-    return datetime.datetime(date)
-
-def getDataFrame(ticker):
-    
-    try:
-        df = yf.download(ticker, period = "2d", interval = '30m', parse_dates = ['Date'])
-        
-        # If the dataframe is empty, exit 
-        if df.empty:
-            print("No data returned from ticker " + str(ticker))
-            quit()
-            
-        # Change the index from datetime 
-        df.reset_index(inplace = True)
-        
-        # Convert the datetime64 north america to datetimen64
-        df['Datetime'] = df['Datetime'].apply(convert_to_datetime64)
-
-        start_index = getDataFrameIndex(df, month = 4, day = 27)
-        
-        findRTHSinglePrints(df[start_index:])
-    except ConnectionError:
-        print("Data for ticker " + str(ticker) + " could not be downloaded...")
-        quit()
-
-
-def getDataFrameIndex(df, day, month):
-    
-    # Create the datetime we are referencing
-    d1 = np.datetime64(datetime.datetime(2021, month, day, 9, 30, 00))
-
-    # Find the location of this
-    start_index = df[df['Datetime'] == d1].index[0]
-   
-    return start_index
-
-getDataFrame("ES=F")
-
-quit()
-# Read in data using Yahoo Finance API. Get rid of ETH data
-es = yf.download("ES=F", period = "2d", interval = '30m', parse_dates = ['Date'])
-nq = yf.download("NQ=F", period = "2d", interval = '30m')[19:-3]
-
-# Change the index from datetime 
-es.reset_index(inplace = True)
-
-print(es.dtypes)
-
-
-def convert_to_datetime64(date):
-    return np.datetime64(date)
-
-def convert_to_datetime(date):
-    return datetime.datetime(date)
-
-
-
-# TODO do I want to keep this in datetime64, or should i convert everything to datetime?
-es['Datetime'] = es['Datetime'].apply(convert_to_datetime64)
-
-
-# Create the datetime we are referencing
-d1 = np.datetime64(datetime.datetime(2021, 4, 27, 9, 30, 00))
-
-# Find the location of this
-start_index = es[es['Datetime'] == d1].index[0]
-
-# print(es.dtypes)
-# quit()?
-# print(nq)
-
-# This method will find the single prints for a day in the past if given
-# a dataframe which contains the the periods for 9:30AM - 4:00PM
-def findRTHSinglePrints(df, tickSize = 0.25):
-
-    print(df)
+# Helper method for get_single_prints. Does a lot of the heavy 
+# lifting once a dataframe is given. Will find all single prints
+# as well as determine excess, weak, and poor highs / lows. 
+def get_single_prints_helper(df, start_index,  tick_size = 0.25):
 
     # Create an empty counter
     c = collections.Counter()
@@ -97,120 +38,173 @@ def findRTHSinglePrints(df, tickSize = 0.25):
         periodLow = df['Low'][i]
 
         # For each high and low, create a numpy series, with tick size intervals
-        periodLocations = np.arange(periodLow, periodHigh + tickSize, tickSize)
+        periodLocations = np.arange(periodLow, periodHigh + tick_size, tick_size)
 
         # Add the period locatiosn to the running counter
         c.update(periodLocations)
 
     # Process the counter
-    singlePrints = []
+    list_of_single_prints = []
 
     # If any of the keys have a value of 1, they are single prints
     for key in c:
         if c[key] == 1:
-            singlePrints.append(key)
+            list_of_single_prints.append(key)
 
-
-    print("The single prints are: ")
-    print(singlePrints)
-
-    listOfLists = []
-    currentList = []
-    listIdx = 0
-    temp = 0
-
-    for idx, singlePrint in enumerate(singlePrints):
-
-        print("We are looking at single print value " + str(singlePrint) + " with temp value " + str(temp))
-
-        if idx == 0:
-            print("Starting a new list")
-            currentList.append(singlePrint)
-            temp = singlePrint
-
-        elif idx == len(singlePrints) - 1:
-
-            try:
-                listOfLists[listIdx] = currentList
-            except IndexError:
-                listOfLists.append(currentList)
-
-        else:
-            if singlePrint < (temp + tickSize):
-                print("We have reached a  division")
-                currentList.append(temp)
-                try:
-                    listOfLists[listIdx] = currentList
-                except IndexError:
-                    listOfLists.append(currentList)
-                listIdx += 1
-                currentList = []
-                currentList.append(singlePrint)
-
-        currentList.append(singlePrint)
-        temp = singlePrint
-
-    for single_print_list in listOfLists:
-        print(single_print_list)
-
-    quit()
-
-    # TODO rewrite these loops with more thought out logic
+    # If the length is 0, exit
+    if len(list_of_single_prints) < 1:
+        print("There are no single prints")
+        quit()
     
-    # if max(c) in singlePrints:
-    #     print("Excess High:     " + str(max(c)), end = ' ')
+    list_of_lists = []
+    current_list = []
+    
+    # Sort the single prints
+    list_of_single_prints = sorted(list_of_single_prints)
+    
+    if debug: print(list_of_single_prints)
+    
+    # Prep the previous pointer for the loop
+    prev_single_print = list_of_single_prints[0]
+    current_list.append(prev_single_print)
 
-    #     for idx, singlePrint in enumerate(reversed(singlePrints)):
+    # Go through the all of the single prints
+    for idx, single_print in enumerate(list_of_single_prints):
+        
+        # Skip the first index
+        if idx == 0:
+            continue
+        
+        # If the line of single prints are interrupted
+        if single_print > (prev_single_print + tick_size):
+            
+            if (debug): print("A new division was found at " + str(single_print))
+            
+            # Add the list to a list of lists
+            list_of_lists.append(current_list)
+            
+            # Reset the current list
+            current_list = []
+            
+        if idx == len(list_of_single_prints) - 1:
+            
+            if (debug): print("The last element found is: " + str(single_print))
+            
+            # Add the element to the list
+            current_list.append(single_print)
+            
+            # Add the list to a list of lists
+            list_of_lists.append(current_list)
+            
+            # Reset the current list
+            current_list = []
+            
+        # Otherwise, add the single_print to the current list
+        current_list.append(single_print)
+        
+        # Walk the previous pointer 
+        prev_single_print = single_print
 
-    #         if (idx == 0):
-    #             temp = singlePrint
+    high_flag = False
+    low_flag = False
+    
+    if debug: print("The length of the list_of_lists is: " + str(len(list_of_lists)))
+    
+    for single_print_list in list_of_lists:
+        
+        if debug: print(single_print_list)
+        
+        # If the maximum value in the counter is in this list it contains the high
+        if max(c) in single_print_list:
+            
+            # Check if its a weak high (one tick of excess)
+            if (len(single_print_list) < 2):
+                print("Weak High:\t", end = ' ')
+            # Otherwise it is an excess high (two ticks of excess or more)
+            else:
+                print("Excess High:\t", end = ' ')
+                
+            # Print the results
+            print(single_print_list[0] ,  " - " , single_print_list[-1], end = ' ')
+            print("\t(" + str(single_print_list[-1]-single_print_list[0])  + ")")
+            
+            # Trip the flag
+            high_flag = True
+            
+        # If the minimum value in the counter is in this list it contains the low
+        elif min(c) in single_print_list:
+            
+            # Check if its a weak low (one tick of excess)
+            if (len(single_print_list) < 2):
+                print("Weak Low:\t", end = ' ')
+                
+            # Otherwise it is an excess low (two ticks of excess or more)
+            else:
+                print("Excess Low:\t", end = ' ')            
+            
+            # Print the results
+            print(single_print_list[0] ,  " - " , single_print_list[-1], end = ' ')
+            print("\t(" + str(single_print_list[-1]-single_print_list[0])  + ")")    
+            
+            # Trip the flag
+            low_flag = True
+            
+        # Otherwise, these are single prints
+        else:
+            # Print the results
+            print("Single Prints:\t", end = ' ')
+            print(single_print_list[0] ,  " - " , single_print_list[-1], end = ' ')
+            print("\t(" + str(single_print_list[-1]-single_print_list[0])  + ")")
 
-    #         if temp > (singlePrint + tickSize):
-    #             print("- " + str(temp) + "\t(" + str(max(c) - temp) + ")")
-    #             break
+    # If we didn't trip the flags, there are no single prints at the highs/lows
+    # Therefore, they are poor. 
+    if high_flag == False:
+        print("Poor High\t" + str(max(c)))
+    if low_flag == False:
+        print("Poor Low\t" + str(min(c)))
+        
+# get the single prints for a ticker within the past 60 days
+def get_single_prints(ticker, month, day):
+    
+    try:
+        # Get the data from yahoo finance
+        df = yf.download(ticker, period = "60d", interval = '30m', progress=False, parse_dates = ['Date'])
+        
+        # If the dataframe is empty, exit 
+        if df.empty:
+            print("No data returned from ticker " + str(ticker))
+            quit()
+            
+        # Change the index from datetime 
+        df.reset_index(inplace = True)
+        
+        # Convert the datetime64 north america to datetimen64
+        df['Datetime'] = df['Datetime'].apply(convert_to_datetime64)
 
-    #         temp = singlePrint
+        # Create the datetime we are referencing
+        # I am using 1:30PM as Yahoo finance always uses UTC timezone so I have to account for that
+        d1 = np.datetime64(datetime.datetime(2021, month, day, 13, 30, 00))
+
+        # Find the location of this
+        start_index = df[df['Datetime'] == d1].index[0]
+        
+        # Print out the results
+        print("----------------------------------------------------")
+        print("\t" + ticker + " single prints " + str(month) + "/" + str(day) + "/2021")
+        print("----------------------------------------------------")
+        print("Parameter\t Range\t\t\tSize")
+        print("----------------------------------------------------")
+        get_single_prints_helper(df[start_index:], start_index)
+
+    except ConnectionError:
+        print("Data for ticker " + str(ticker) + " could not be downloaded...")
+        quit()
+    except IndexError:
+        print("Uh oh! I don't think " + str(month) + "/" + str(day) + " is a trading day")
+    except ValueError:
+        print("Uh oh! I don't think " + str(month) + "/" + str(day) + " is a trading day")
 
 
-    # for currList in reversed(listOfLists):
-    #     try:
-    #         if (max(c) not in currList and min(c) not in currList):
-    #             print("Single Prints:   " + str(currList[len(currList) - 1]) + " - " + str(currList[0]) + "\t(" + str(currList[len(currList) - 1] - currList[0]) + str(")"))
-    #     except:
-    #         continue
+# Get the single prints for a day within the past 60 days for any ticker
+get_single_prints(ticker = "ES=F", month = 4, day = 27)
 
-
-
-
-    # if min(c) in singlePrints:
-    #     # print("Excess Low:      " + str(min(c)), end = ' ')
-
-    #     for idx, singlePrint in enumerate(singlePrints):
-
-    #         if (idx == 0):
-    #             temp = singlePrint
-
-    #         if singlePrint > (temp + tickSize):
-    #             print("Excess Low:      " + str(temp) + " - " + str(min(c)) + "\t(" + str(temp - min(c)) + str(")"))
-    #             break
-
-    #         temp = singlePrint
-
-    # If our high is in one of the single print distributions, that is an excess high
-
-    # If our low is in one of the single print distributions, that is an excess low
-
-
-print("\n")
-print("--------------------- ES ----------------------")
-print("Parameter            Range               Size")
-print("-----------------------------------------------")
-findRTHSinglePrints(es[start_index:])
-# print("")
-# print("--------------------- NQ ----------------------")
-
-# print("Parameter            Range               Size")
-# print("-----------------------------------------------")
-# findRTHSinglePrints(nq)
-# print("-----------------------------------------------")
-# print("\n")
