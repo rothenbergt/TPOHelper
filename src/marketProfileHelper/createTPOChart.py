@@ -1,1 +1,0 @@
-# A file which creates the TPO chart using standard market data

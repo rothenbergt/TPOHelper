@@ -118,7 +118,6 @@ def createTPO(df):
         stop = i
         tempSet = set()
         
-        
         # Get the High and Low for each
         high = float(df.loc[i+1][df.columns[2]])
         low = float(df.loc[i][df.columns[3]])
@@ -174,8 +173,7 @@ def createTPO(df):
     for i in range(df.index[df['T'] == periodastart].tolist()[0], df.index[df['T'] == periodaend].tolist()[0] + 1):
         aset.add(df.loc[i][df.columns[1]])
         
-    
-        
+
     # # From period a start to period a end + 1 ?, create the series
     for i in range(df.index[df['T'] == periodaend].tolist()[0] + 1, df.index[df['T'] == periodbend].tolist()[0] + 1):
         bset.add(df.loc[i][df.columns[1]])

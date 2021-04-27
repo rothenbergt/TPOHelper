@@ -1,1 +1,0 @@
-# A file which determins if there is excess on a given day
